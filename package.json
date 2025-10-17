@@ -1,0 +1,20 @@
+{
+  "name": "ai-pc-generator-backend",
+  "version": "1.0.0",
+  "description": "Vercel serverless function for AI PC specification generation using Gemini API.",
+  "main": "api/generate.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "keywords": [
+    "vercel",
+    "gemini",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {}
+}
