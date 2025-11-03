@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PC 規格生成器</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+    <style>
+        /* Base styling for dark theme and custom fonts */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: #111827; /* Dark background */
+            color: #E5E7EB; /* Light text */
+        }
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .container {
+            max-width: 960px;
+        }
+        /* Custom button styling */
+        .btn {
+            background-image: linear-gradient(45deg, #1f2937, #374151);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            border: 2px solid #3B82F6; /* Blue border for highlight */
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3); /* Blue shadow on hover */
+            background-image: linear-gradient(45deg, #374151, #4B5563);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        /* Result item card styling */
+        .result-item {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid #4B5563;
+            transition: all 0.3s ease;
+        }
+        .result-item:hover {
+            background: rgba(55, 65, 81, 0.9);
+            transform: translateY(-2px); /* Subtle lift effect */
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+        }
+        /* Loading spinner animation */
+        .loading-spinner {
+            border: 4px solid #374151;
+            border-top: 4px solid #3B82F6; /* Blue spinner */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-8 md:p-12">
+    <div class="container mx-auto">
+        <!-- Title and Description -->
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 orbitron">AI PC</h1>
+        <p class="text-center text-gray-400 mb-8 md:mb-12 text-sm md:text-base">請輸入您的需求，AI 將為您推薦一套完整的 PC 組裝清單。</p>
+
+        <!-- Input and Button -->
+        <div class="flex flex-col md:flex-row gap-4 mb-8">
+            <textarea id="promptInput" rows="3" class="flex-grow p-4 bg-gray-800 text-gray-200 rounded-lg border-2 border-gray-600 focus:border-blue-500 focus:outline-none placeholder-gray-500 text-base" placeholder="例如: i5-12400 最高階顯卡最大記憶體 最大硬碟"></textarea>
+            <button id="generateBtn" class="btn shrink-0 px-8 py-4 rounded-lg font-bold text-white text-lg">
+                生成 AI PC
+            </button>
+        </div>
+
+        <!-- Message Box (for errors/info, replaces alert) -->
+        <div id="messageBox" class="hidden p-4 mt-6 mb-6 rounded-lg text-center font-semibold" role="alert"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden flex justify-center items-center py-8">
+            <div class="loading-spinner"></div>
+            <p class="ml-4 text-gray-400">AI 正在為您分析中...</p>
+        </div>
+
+        <!-- Results Container -->
+        <div id="resultContainer" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <!-- Results will be injected here -->
+        </div>
+    </div>
+    <script>
+        // Icons in SVG format for a "black technology" aesthetic
+        const icons = {
+            '主機板': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9-6h6m-3-3v6M4 16h6m-3-3v6m3-3h6m-3-3v6m-6-6h6m-3-3v6"/></svg>`,
+            '處理器': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>`,
+            '散熱器': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12a5 5 0 11-5-5 5 5 0 015 5zM12 12v.01M16 12a4 4 0 11-4-4 4 4 0 014 4zM16 12a2 2 0 11-2-2 2 2 0 012 2zM12 2V.5m0 21.5V22m10-10h-2m-16 0H2m12 10l-2-2m-4 4l2-2m-4-4l-2 2m-2-2l2 2"/></svg>`,
+            '記憶體': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>`,
+            '顯示卡': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20v-6m0 0a10 10 0 110-16 10 10 0 010 16zM15 15v-5m0 0a10 10 0 110-16 10 10 0 010 16z"/></svg>`,
+            '儲存裝置': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10a1 1 0 110-2 1 1 0 010 2z"/></svg>`,
+            '電源供應器': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`,
+            '機殼': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14h-8m-7 0h7m-7 0l-2 2v-4l2-2m7 2v4m0-4h4m-4 0l-2-2v4l2 2m4-4v4m0-4h4m-4 0l-2-2v4l2 2"/></svg>`,
+            '光碟機': `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12M6 12h12"/></svg>`
+        };
+
+        const promptInput = document.getElementById('promptInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingDiv = document.getElementById('loading');
+        const resultContainer = document.getElementById('resultContainer');
+        const messageBox = document.getElementById('messageBox'); // Dedicated message box
+
+        // Reference data (Hard-coded to pass to the backend)
+        const HARDWARE_DATA = `
+        硬體規格參考圖
+        1.主機板（Motherboard, MB）2.處理器（Central Processing Unit, CPU）4.記憶體（Random Access Memory, RAM）6.儲存裝置（Solid State Drive, SSD / M.2）5.顯示卡（Graphics Processing Unit, GPU）
+        1. 主機板（Motherboard, MB）
+        2. 處理器（Central Processing Unit, CPU）
+        3. 處理器散熱器（CPU Fan / Cooler）
+        4. 記憶體（Random Access Memory, RAM）
+        5. 顯示卡（Graphics Processing Unit, GPU）
+        6. 儲存裝置（Solid State Drive, SSD / M.2）
+        7. 電源供應器（Power Supply Unit, PSU）
+        8. 機殼（Case）
+        9. 光碟機（DVD-RW）
+        1. 主機板（Motherboard, MB）2. 處理器（Central Processing Unit, CPU）
+        🟦 Intel
+        CPU 腳位、世代與晶片組對照腳位 (Socket) 世代 (CPU) 代表系列 主機板晶片組 LGA1366 第1代 Nehalem / Westmere Core i7 900 系列 X58 LGA1156 第1代 Lynnfield /
+        Clarkdale Core i3 / i5 / i7 8xx H55, P55, H57, Q57 LGA1155 第2代 Sandy Bridge / 第3代 Ivy Bridge Core i3
+        / i5 / i7 2xxx, 3xxx H61, B65, Q65, P67, H67, Q67, Z68, B75, Q75, Z75, H77,
+        Q77, Z77 LGA1150 第4代 Haswell / 第5代 Broadwell Core i3 / i5 / i7 4xxx, 5xxx H81, B85, Q85, Q87, H87,
+        Z87, H97, Z97 LGA1151 (v1) 第6代 Skylake / 第7代 Kaby Lake Core i3 / i5 / i7 6xxx, 7xxx H110, B150, Q150, H170,
+        Q170, Z170, B250, Q250, H270, Q270, Z270 LGA1151 (v2) 第8代 Coffee Lake / 第9代 Coffee Lake Refresh
+        Core i3 / i5 / i7 / i9 8xxx, 9xxx H310, B360, H370, Q370, Z370, B365, Z390
+        LGA1200 第10代 Comet Lake / 第11代 Rocket Lake Core i3 / i5 / i7 / i9 10xxx, 11xxx H410, B460, H470,
+        Q470, Z490, W480, H510, B560, H570, Z590, W580 LGA1700 第12代 Alder Lake / 第13代 Raptor Lake / 第14代 Raptor Lake Refresh
+        Core i3 / i5 / i7 / i9 12xxx–14xxx Z690, H670, B660, H610, Z790, B760, H770
+        LGA1851（未來） 第15代 Arrow Lake Core
+        Ultra 5 / 7 / 9 H810 (傳聞中)
+        🟦 AMD
+        CPU 腳位、世代與晶片組對照腳位 (Socket) 世代 (CPU) 代表系列 主機板晶片組 AM2 / AM2+ Athlon 64 / Phenom / Sempron Athlon 64 / Phenom X3/X4
+        690G, 770, 790GX AM3 / AM3+ Phenom II / FX 系列 Phenom II X2~X6, FX-4/6/8 770, 790FX,
+        990FX FM1 / FM2 / FM2+ APU 系列 A4/A6/A8/A10, Athlon X4 A55, A75, A85X AM4 Ryzen 1000~5000 Ryzen
+        3/5/7/9 A320, B350, B450, X370, X470, B550, X570 sTR4 / TR4 Threadripper 第一代 TR 1900X~2990WX
+        X399 sTRX4 Threadripper 第三代 TR 3960X~3995WX TRX40 sWRX8 Threadripper Pro 3945WX~5995WX WRX80
+        AM5 Ryzen 7000 系列 Ryzen 5/7/9 B650, B650E, X670, X670E SP6 / SP5 EPYC 3/4 代 伺服器用 EPYC 專用晶片組
+        4. 記憶體（Random Access Memory, RAM）世代 JEDEC 標準頻率 (MHz, I/O Bus
+        Clock) 資料傳輸速率 (MT/s) 常見命名方式 DDR (DDR1) 100, 133, 166, 200 200–400 MT/s DDR-200, DDR-266,
+        DDR-333, DDR-400 DDR2 200, 266, 333, 400 400–800 MT/s DDR2-400, DDR2-533,
+        DDR2-667, DDR2-800 DDR3 400, 533, 667, 800 800–1600 MT/s DDR3-800, DDR3-1066,
+        DDR3-1333, DDR3-1600 DDR4 1066, 1200, 1333, 1600 2133–3200 MT/s DDR4-2133,
+        DDR4-2400, DDR4-2666, DDR4-2933, DDR4-3200 DDR5 2400–3600 MHz (初期標準) 4800–6400 MT/s
+        DDR5-4800, DDR5-5600, DDR5-6400（之後 JEDEC 逐漸推出更高標準）
+        6. 儲存裝置（Solid State Drive, SSD / M.2） 2230 | ███████████████████| 30mm 2242 | ████████████████████████|
+        42mm 2260 | ██████████████████████████████| 60mm 2280 | ██████████████████████████████████████| 80mm 22110 | ████████████████████████████████████████████████| 110mm
+        +--------+-----------+-----------+---------------------------+ | 規格 | 寬度(mm) | 長度(mm) | 常見用途 / 說明 |
+        +--------+-----------+-----------+---------------------------+ | 2230 | 22 | 30
+        | 超小型筆電、嵌入式設備 | +--------+-----------+-----------+---------------------------+ |
+        2242 | 22 | 42 | 小型筆電、迷你電腦 | +--------+-----------+-----------+---------------------------+ |
+        2260 | 22 | 60 | 筆電或桌機，容量較大 | +--------+-----------+-----------+---------------------------+ |
+        2280 | 22 | 80 | 桌機與筆電最常見，容量多 | +--------+-----------+-----------+---------------------------+ |
+        22110 | 22 | 110 | 高容量伺服器或工作站使用 | +--------+-----------+-----------+---------------------------+
+        5. 顯示卡（Graphics Processing Unit, GPU） NVIDIA GeForce RTX 系列分類表 (20 / 30 / 40 / 50 系列) 系列 低階 (入門) 中階 (主流) 高階 (旗艦) RTX 20 系列 (2018) RTX 2060 /
+        2060 Super RTX 2070 / 2070 Super / 2070 Ti RTX 2080 / 2080 Super / 2080 Ti RTX
+        30 系列 (2020) RTX 3050 / 3060 / 3060 Ti RTX 3070 / 3070 Ti / 3080 RTX 3080
+        / 3080 Ti / 3090 / 3090 Ti RTX 40 系列 (2022–2024) RTX 4050 / 4060 / 4060 Ti RTX 4070 / 4070 Ti / 4080 RTX
+        4080 Super / 4090 RTX 50 系列 (預計 2025) RTX 5050 / 5060 / 5060 Ti RTX 5070 / 5070 Ti / 5080 RTX 5080
+        Ti / 5090
+        AMD Radeon RX 系列分級表 (5000 / 6000 / 7000 系列) 系列 低階 (入門) 中階 (主流) 高階 (旗艦) RX 5000 系列 (2019, RDNA1) RX
+        5500 XT RX 5600 XT / RX 5700 RX 5700 XT RX 6000 系列 (2020, RDNA2) RX 6500 XT / RX 6600 RX
+        6600 XT / 6700 XT / 6750 XT RX 6800 / 6800 XT / 6900 XT RX 7000 系列 (2022–2024, RDNA3)
+        RX 7600 RX 7700 XT RX 7800 XT / 7900 XT / 7900 XTX
+        `;
+
+        /**
+         * Displays a temporary message in the dedicated message box.
+         * @param {string} text The message text.
+         * @param {boolean} isError True if it's an error message (red background).
+         */
+        function showMessage(text, isError = false) {
+            messageBox.innerText = text;
+            messageBox.className = `p-4 mt-6 mb-6 rounded-lg text-center font-semibold ${isError ? 'bg-red-700 text-white' : 'bg-blue-700 text-white'} block`;
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Function to make the API call and display results
+        async function generatePC() {
+            const prompt = promptInput.value;
+            messageBox.classList.add('hidden'); // Hide any previous messages
+
+            if (!prompt) {
+                showMessage('請輸入您的需求！', true);
+                return;
+            }
+
+            loadingDiv.classList.remove('hidden');
+            resultContainer.innerHTML = ''; // Clear previous results
+            generateBtn.disabled = true;
+
+            const apiPath = '/api/generate'; // 指向 Vercel Serverless Function
+
+            try {
+                // Prepare payload to send to the backend
+                const payload = {
+                    prompt: prompt, // 傳遞使用者輸入
+                    hardwareData: HARDWARE_DATA // 傳遞參考資料
+                };
+
+                // The client simply calls the Vercel Serverless Function
+                const response = await fetch(apiPath, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Server Error: ${response.status}`);
+                }
+
+                // Serverless function is expected to return the final JSON array
+                const data = await response.json();
+
+                // Render the results
+                data.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'result-item p-6 rounded-xl flex items-start space-x-4 animate-fade-in';
+
+                    // Get component name without parentheses for icon lookup
+                    const cleanName = item.componentName.split('(')[0].trim();
+                    const icon = icons[cleanName] || `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m-3-3V8a4 4 0 014 4h4a4 4 0 01-4 4H8a4 4 0 01-4-4v-4z"/></svg>`;
+
+                    itemDiv.innerHTML = `
+                        <div class="flex-shrink-0 text-blue-400">
+                            ${icon}
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-lg mb-1 text-white">${item.componentName}</h3>
+                            <p class="text-sm text-gray-400">${item.componentDescription}</p>
+                        </div>
+                    `;
+                    resultContainer.appendChild(itemDiv);
+                });
+
+            } catch (error) {
+                showMessage(`生成失敗，錯誤: ${error.message || '請檢查 Vercel 密鑰和函數。'}`, true);
+                console.error("Error fetching data:", error);
+
+            } finally {
+                loadingDiv.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        // Event listener for the button
+        generateBtn.addEventListener('click', generatePC);
+    </script>
+</body>
+</html>
