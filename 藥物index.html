@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抗精神病藥物導覽系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen p-4 md:p-12 text-slate-100">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-white mb-3">藥物分類系統</h1>
+            <p class="text-blue-300 font-light">By Boyu | 抗精神病藥物導覽</p>
+        </header>
+
+        <div class="glass-card rounded-3xl p-8 md:p-12 shadow-2xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 藥物類別選擇 -->
+                <div>
+                    <label class="block text-sm font-semibold text-blue-200 mb-3 ml-1">藥物類別</label>
+                    <select id="category" class="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all cursor-pointer text-white">
+                        <option value="">請選擇藥物世代</option>
+                        <option value="1">第一代 (Typical)</option>
+                        <option value="2">第二代 (Atypical)</option>
+                        <option value="3">第三代 (Partial Agonist)</option>
+                    </select>
+                </div>
+
+                <!-- 作用機制顯示 -->
+                <div>
+                    <label class="block text-sm font-semibold text-blue-200 mb-3 ml-1">作用機制</label>
+                    <div id="mechanism-display" class="w-full p-4 bg-slate-800/50 border border-slate-700 rounded-2xl text-blue-100 transition-all">
+                        請先選擇藥物類別...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 藥物列表區域 -->
+            <div class="mt-10">
+                <label class="block text-sm font-semibold text-blue-200 mb-4 ml-1">相關藥物清單</label>
+                <div id="drug-list" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-6 bg-slate-950/50 rounded-2xl border border-slate-800 min-h-[150px]">
+                    <div class="col-span-full flex items-center justify-center text-slate-500">
+                        選擇類別後將顯示藥物列表
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-slate-500 text-sm">
+            本系統僅供參考，實際醫療用藥請諮詢專業醫師。
+        </footer>
+    </div>
+
+    <script>
+        const data = {
+            '1': {
+                mechanism: '第一代多巴胺 D2 受體拮抗劑',
+                drugs: ['氟哌啶醇', '氟哌利多', '氯丙嗪', '氟奮乃靜', '奮乃靜', '硫利達嗪', '氯丙硫蔥', '氟哌噻噸', '丙氯拉嗪', '三氟拉嗪']
+            },
+            '2': {
+                mechanism: '第二代多巴胺 D2 與血清素 2A 受體拮抗劑',
+                drugs: ['氯氮平', '利培酮', '盧拉西酮', '齊拉西酮', '帕利哌酮', '伊潘立酮', '奧氮平', '喹硫平', '阿塞那平', '氨磺必利', '舒必利']
+            },
+            '3': {
+                mechanism: '第三代多巴胺 D2 受體部分激動劑',
+                drugs: ['阿立哌唑', '布瑞哌唑', '卡利拉嗪']
+            }
+        };
+
+        const categorySelect = document.getElementById('category');
+        const mechanismDisplay = document.getElementById('mechanism-display');
+        const drugListDiv = document.getElementById('drug-list');
+
+        categorySelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            
+            if (val && data[val]) {
+                mechanismDisplay.textContent = data[val].mechanism;
+                mechanismDisplay.classList.add('text-blue-300', 'font-medium');
+                
+                drugListDiv.innerHTML = data[val].drugs.map(drug => `
+                    <div class="bg-slate-800 hover:bg-blue-600 p-3 rounded-xl border border-slate-700 shadow-sm text-center text-slate-200 hover:text-white transition-all transform hover:scale-105 cursor-default">
+                        ${drug}
+                    </div>
+                `).join('');
+            } else {
+                mechanismDisplay.textContent = '請先選擇藥物類別...';
+                mechanismDisplay.classList.remove('text-blue-300');
+                drugListDiv.innerHTML = '<div class="col-span-full flex items-center justify-center text-slate-500">選擇類別後將顯示藥物列表</div>';
+            }
+        });
+    </script>
+</body>
+</html>
